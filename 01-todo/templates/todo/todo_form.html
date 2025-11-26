@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>{% if todo %}Edit{% else %}Create{% endif %} TODO</h1>
+<form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label for="title" class="form-label">Title</label>
+        <input type="text" class="form-control" id="title" name="title" value="{{ todo.title|default:'' }}" required>
+    </div>
+    <div class="mb-3">
+        <label for="description" class="form-label">Description</label>
+        <textarea class="form-control" id="description" name="description"
+            rows="3">{{ todo.description|default:'' }}</textarea>
+    </div>
+    <div class="mb-3">
+        <label for="due_date" class="form-label">Due Date</label>
+        <input type="datetime-local" class="form-control" id="due_date" name="due_date"
+            value="{{ todo.due_date|date:'Y-m-d\TH:i' }}">
+    </div>
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a href="{% url 'todo_list' %}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

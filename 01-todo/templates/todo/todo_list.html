@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col">
+        <h1>My TODOs</h1>
+    </div>
+    <div class="col text-end">
+        <a href="{% url 'todo_create' %}" class="btn btn-primary">Add TODO</a>
+    </div>
+</div>
+
+<div class="list-group">
+    {% for todo in todos %}
+    <div
+        class="list-group-item d-flex justify-content-between align-items-center {% if todo.is_resolved %}list-group-item-success{% endif %}">
+        <div>
+            <h5 class="mb-1">{{ todo.title }}</h5>
+            <p class="mb-1">{{ todo.description }}</p>
+            <small>Due: {{ todo.due_date|default:"No due date" }}</small>
+        </div>
+        <div>
+            <form action="{% url 'todo_resolve' todo.pk %}" method="post" class="d-inline">
+                {% csrf_token %}
+                <button type="submit"
+                    class="btn btn-sm {% if todo.is_resolved %}btn-warning{% else %}btn-success{% endif %}">
+                    {% if todo.is_resolved %}Unresolve{% else %}Resolve{% endif %}
+                </button>
+            </form>
+            <a href="{% url 'todo_update' todo.pk %}" class="btn btn-sm btn-secondary">Edit</a>
+            <a href="{% url 'todo_delete' todo.pk %}" class="btn btn-sm btn-danger">Delete</a>
+        </div>
+    </div>
+    {% empty %}
+    <p>No TODOs yet.</p>
+    {% endfor %}
+</div>
+{% endblock %}
