@@ -1,0 +1,28 @@
+# Additional test requirements for integration and e2e tests
+
+# WebSocket client for integration tests
+websocket-client==1.6.4
+
+# Async HTTP client for e2e tests
+httpx==0.25.2
+
+# Async WebSocket client for e2e tests  
+websockets==12.0
+
+# Test coverage
+pytest-cov==4.1.0
+
+# Async testing
+pytest-asyncio==0.21.1
+
+# Parallel test execution
+pytest-xdist==3.5.0
+
+# Test reporting
+pytest-html==4.1.1
+
+# Mock and fixtures
+pytest-mock==3.12.0
+
+# Benchmarking
+pytest-benchmark==4.0.0
