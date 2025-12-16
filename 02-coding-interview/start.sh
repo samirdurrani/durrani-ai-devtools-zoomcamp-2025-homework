@@ -47,3 +47,4 @@ echo ""
 
 # Start both services using concurrently
 npm run dev
+

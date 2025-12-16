@@ -80,3 +80,4 @@ networks:
 volumes:
   coding-platform-data:
     driver: local
+

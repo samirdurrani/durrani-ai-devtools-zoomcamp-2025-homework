@@ -87,3 +87,4 @@ docker-compose*.yml
 *.sqlite
 *.sqlite3
 backend/db.sqlite3
+

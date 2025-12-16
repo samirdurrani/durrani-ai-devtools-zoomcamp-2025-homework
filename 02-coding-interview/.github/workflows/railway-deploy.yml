@@ -39,3 +39,4 @@ jobs:
           echo "Deployment completed!"
           railway status || true
           railway domain || true
+

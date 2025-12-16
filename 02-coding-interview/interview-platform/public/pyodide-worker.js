@@ -153,3 +153,4 @@ output
 
 // Notify that the worker is ready
 self.postMessage({ type: 'ready' });
+

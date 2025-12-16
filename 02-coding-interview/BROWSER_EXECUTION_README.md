@@ -243,3 +243,4 @@ MIT License - See LICENSE file for details
 ---
 
 **Note**: Server-side execution has been disabled by default for security. To re-enable it, set `enable_server_execution: true` in `backend/app/core/config.py`.
+

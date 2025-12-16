@@ -16,3 +16,4 @@ FRONTEND_BUILD_PATH = "/app/frontend-dist"
 ENABLE_SERVER_EXECUTION = "false"
 NODE_ENV = "production"
 PYTHONUNBUFFERED = "1"
+

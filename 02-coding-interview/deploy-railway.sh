@@ -205,3 +205,4 @@ if [ ! -z "$DEPLOY_URL" ]; then
 fi
 echo ""
 print_success "Happy coding! 🎉"
+
