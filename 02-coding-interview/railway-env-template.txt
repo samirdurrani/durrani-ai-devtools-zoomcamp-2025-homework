@@ -1,0 +1,43 @@
+# Railway Environment Variables Template
+# Copy these to Railway dashboard or use with railway CLI
+# railway variables set KEY=value
+
+# Application Settings
+NODE_ENV=production
+APP_NAME=Online Coding Interview Platform
+DEBUG=false
+
+# Frontend Serving
+SERVE_FRONTEND=true
+FRONTEND_BUILD_PATH=/app/frontend-dist
+
+# Security
+ENABLE_SERVER_EXECUTION=false
+SECRET_KEY=your-secret-key-here-generate-with-openssl-rand-hex-32
+
+# CORS Configuration
+# Update with your Railway domain after deployment
+CORS_ORIGINS=https://*.up.railway.app
+
+# Python Settings
+PYTHONUNBUFFERED=1
+PYTHONDONTWRITEBYTECODE=1
+
+# Performance
+WORKERS=4
+LOG_LEVEL=INFO
+
+# WebSocket Settings
+WS_HEARTBEAT_INTERVAL=30
+MAX_CONNECTIONS_PER_SESSION=50
+
+# Session Settings  
+SESSION_TIMEOUT_MINUTES=120
+MAX_SESSIONS=1000
+
+# Optional: Custom Domain (after setting up in Railway)
+# CUSTOM_DOMAIN=coding.yourdomain.com
+
+# Optional: Monitoring (if using)
+# SENTRY_DSN=your-sentry-dsn
+# DATADOG_API_KEY=your-datadog-key

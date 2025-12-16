@@ -89,4 +89,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 
 # Default command - serve both frontend and backend
 # The backend will serve the frontend static files
-CMD ["sh", "-c", "cd /app/backend && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+# Use Railway's PORT environment variable, fallback to 8000 for local development
+CMD ["sh", "-c", "cd /app/backend && python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
