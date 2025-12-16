@@ -1,0 +1,61 @@
+version: '3.8'
+
+# Development Docker Compose configuration
+# Use this for local development with hot reloading
+
+services:
+  coding-platform-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    image: coding-interview-platform:dev
+    container_name: coding-platform-dev
+    ports:
+      - "8000:8000"  # Backend API
+      - "3000:3000"  # Frontend dev server
+      - "5555:5555"  # Optional: Python debugger port
+    environment:
+      - NODE_ENV=development
+      - PYTHONUNBUFFERED=1
+      - DEBUG=true
+      - RELOAD=true
+      
+      # Backend settings
+      - HOST=0.0.0.0
+      - PORT=8000
+      - LOG_LEVEL=DEBUG
+      
+      # CORS for development
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:8000,http://127.0.0.1:3000
+      
+      # Enable server execution for development testing
+      - ENABLE_SERVER_EXECUTION=true
+      
+      # Don't serve frontend in dev (use Vite dev server)
+      - SERVE_FRONTEND=false
+    volumes:
+      # Mount source code for hot reloading
+      - ./backend:/app/backend
+      - ./interview-platform:/app/interview-platform
+      
+      # Exclude node_modules
+      - /app/interview-platform/node_modules
+      
+      # Persist pip and npm cache
+      - pip-cache:/root/.cache/pip
+      - npm-cache:/root/.npm
+    networks:
+      - coding-platform-network
+    stdin_open: true
+    tty: true
+    command: /app/start-docker.sh
+
+networks:
+  coding-platform-network:
+    driver: bridge
+
+volumes:
+  pip-cache:
+    driver: local
+  npm-cache:
+    driver: local

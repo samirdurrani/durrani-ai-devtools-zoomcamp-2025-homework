@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  coding-platform:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: coding-interview-platform:latest
+    container_name: coding-platform
+    ports:
+      # Backend API + Frontend (served by backend)
+      - "8000:8000"
+    environment:
+      # Application settings
+      - NODE_ENV=production
+      - PYTHONUNBUFFERED=1
+      
+      # Backend configuration
+      - APP_NAME=Online Coding Interview Platform
+      - DEBUG=false
+      - HOST=0.0.0.0
+      - PORT=8000
+      
+      # CORS settings (adjust for your domain in production)
+      - CORS_ORIGINS=http://localhost:8000,http://localhost:3000,http://127.0.0.1:8000
+      
+      # Security settings
+      - ENABLE_SERVER_EXECUTION=false  # Disable server-side code execution
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-here-change-in-production}
+      
+      # Frontend serving
+      - SERVE_FRONTEND=true
+      - FRONTEND_BUILD_PATH=/app/frontend-dist
+      
+      # WebSocket settings
+      - WS_HEARTBEAT_INTERVAL=30
+      - MAX_CONNECTIONS_PER_SESSION=50
+      
+      # Session settings
+      - SESSION_TIMEOUT_MINUTES=120
+      - MAX_SESSIONS=1000
+    volumes:
+      # Mount for development (optional - comment out for production)
+      # - ./backend:/app/backend:ro
+      # - ./interview-platform/dist:/app/frontend-dist:ro
+      
+      # Persist data (optional)
+      - coding-platform-data:/app/data
+    networks:
+      - coding-platform-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Nginx reverse proxy for production
+  # Uncomment this section if you want to use Nginx in front
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: coding-platform-nginx
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+  #     - ./nginx/ssl:/etc/nginx/ssl:ro
+  #   depends_on:
+  #     - coding-platform
+  #   networks:
+  #     - coding-platform-network
+  #   restart: unless-stopped
+
+networks:
+  coding-platform-network:
+    driver: bridge
+
+volumes:
+  coding-platform-data:
+    driver: local

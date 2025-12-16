@@ -1,0 +1,68 @@
+# Development Dockerfile for Online Coding Interview Platform
+# Includes development tools and hot reloading capabilities
+
+FROM python:3.11
+
+# Install Node.js and development tools
+RUN apt-get update && \
+    apt-get install -y \
+        curl \
+        netcat-openbsd \
+        vim \
+        git \
+        build-essential && \
+    curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+    apt-get install -y nodejs && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files for both frontend and backend
+COPY package.json ./
+COPY backend/requirements.txt ./backend/
+COPY interview-platform/package.json ./interview-platform/
+
+# Install Python dependencies (including development tools)
+RUN pip install --no-cache-dir -r backend/requirements.txt && \
+    pip install --no-cache-dir \
+        pytest \
+        pytest-asyncio \
+        pytest-cov \
+        black \
+        flake8 \
+        mypy \
+        ipython \
+        ipdb
+
+# Install Node dependencies
+WORKDIR /app/interview-platform
+RUN npm install
+
+# Install global Node tools
+RUN npm install -g concurrently nodemon
+
+# Back to app root
+WORKDIR /app
+
+# Copy application source code
+COPY backend/ ./backend/
+COPY interview-platform/ ./interview-platform/
+COPY start-docker.sh ./
+
+# Make startup script executable
+RUN chmod +x start-docker.sh
+
+# Expose ports
+EXPOSE 8000 3000 5555
+
+# Environment variables for development
+ENV NODE_ENV=development \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    RELOAD=true \
+    DEBUG=true
+
+# Default command for development
+CMD ["./start-docker.sh"]

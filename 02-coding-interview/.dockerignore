@@ -1,0 +1,89 @@
+# .dockerignore - Files and directories to exclude from Docker build context
+
+# Version control
+.git
+.gitignore
+
+# Node.js
+node_modules
+interview-platform/node_modules
+npm-debug.log
+yarn-error.log
+.npm
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+backend/__pycache__
+backend/**/__pycache__
+backend/.pytest_cache
+.pytest_cache
+*.egg-info
+.eggs
+*.egg
+
+# Virtual environments
+venv
+env
+ENV
+.venv
+.ENV
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+*.swn
+.DS_Store
+*.sublime-*
+
+# Testing
+coverage
+.coverage
+htmlcov
+*.cover
+.hypothesis
+.pytest_cache
+backend/tests/__pycache__
+test-results
+
+# Build artifacts
+dist
+build
+*.log
+frontend-dist
+
+# Documentation
+*.md
+!README.md
+docs
+
+# Development files
+.env
+.env.local
+.env.*.local
+*.env
+backend/.env
+
+# Temporary files
+tmp
+temp
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Docker files (don't include these in the build context)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Misc
+*.db
+*.sqlite
+*.sqlite3
+backend/db.sqlite3

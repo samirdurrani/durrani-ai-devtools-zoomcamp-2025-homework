@@ -6,11 +6,14 @@ It sets up the application, middleware, routes, and error handlers.
 """
 
 import logging
+import os
 from datetime import datetime
+from pathlib import Path
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.exceptions import RequestValidationError
+from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.core.exceptions import BaseAPIException
@@ -123,6 +126,35 @@ app.include_router(sessions.router)  # Session management
 app.include_router(languages.router)  # Language information
 app.include_router(execution.router)  # Code execution
 app.include_router(websocket.router)  # WebSocket for real-time
+
+
+# Serve frontend static files if configured
+# This is used when running in a container with the built frontend
+serve_frontend = os.getenv("SERVE_FRONTEND", "false").lower() == "true"
+frontend_build_path = os.getenv("FRONTEND_BUILD_PATH", "/app/frontend-dist")
+
+if serve_frontend and os.path.exists(frontend_build_path):
+    logger.info(f"Serving frontend static files from {frontend_build_path}")
+    
+    # Mount static files for assets
+    app.mount("/assets", StaticFiles(directory=f"{frontend_build_path}/assets"), name="assets")
+    
+    # Serve index.html for the root and all non-API routes (for React Router)
+    @app.get("/{path:path}")
+    async def serve_frontend_app(path: str):
+        """
+        Serve the React frontend application.
+        Returns index.html for all non-API routes to support client-side routing.
+        """
+        # Skip API routes and WebSocket
+        if path.startswith("api/") or path.startswith("ws/") or path.startswith("docs") or path.startswith("redoc") or path.startswith("openapi"):
+            return {"error": "Not found"}
+        
+        index_path = Path(frontend_build_path) / "index.html"
+        if index_path.exists():
+            return FileResponse(index_path)
+        else:
+            return {"error": "Frontend not found"}
 
 
 # Root endpoint
