@@ -1,0 +1,1147 @@
+openapi: 3.0.3
+
+# API INFORMATION
+# This section describes what your API is about
+info:
+  title: Online Coding Interview Platform API
+  description: |
+    ## 🎯 Overview
+    This API powers an online coding interview platform that enables real-time collaborative coding sessions.
+    Interviewers can create sessions, share links with candidates, and watch them code in real-time.
+    
+    ## ✨ Key Features
+    - **Session Management**: Create and join interview sessions with unique IDs
+    - **Real-time Collaboration**: WebSocket-based live code sharing
+    - **Multi-language Support**: JavaScript, Python, Java, C++ and more
+    - **Code Execution**: Safe code execution with output streaming
+    - **Simple Authentication**: Session-based access with shareable links
+    
+    ## 🔌 WebSocket Endpoint
+    For real-time collaboration, connect to: `ws://api-server/ws/sessions/{sessionId}`
+    
+    See the WebSocket Messages section below for message formats.
+    
+    ## 🚀 Quick Start
+    1. Create a session using `POST /api/v1/sessions`
+    2. Share the `joinUrl` with participants
+    3. Connect to the WebSocket endpoint for real-time updates
+    4. Execute code using `POST /api/v1/sessions/{sessionId}/execute`
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@codinginterview.platform
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+# SERVER CONFIGURATION
+# This tells clients where your API is hosted
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Local development server
+  - url: https://api.codinginterview.platform/api/v1
+    description: Production server
+
+# GROUPING OF ENDPOINTS
+# Tags help organize endpoints in documentation
+tags:
+  - name: Sessions
+    description: |
+      Manage interview sessions. Each session represents a coding interview room
+      where multiple participants can collaborate in real-time.
+  - name: Languages
+    description: |
+      Programming language support. Get information about supported languages,
+      syntax highlighting, and default code templates.
+  - name: Execution
+    description: |
+      Code execution service. Run code safely with timeout protection and
+      resource limits. JavaScript runs in browser, other languages on server.
+  - name: Health
+    description: |
+      Service health checks. Useful for monitoring and debugging.
+
+# API ENDPOINTS
+paths:
+  # HEALTH CHECK ENDPOINT
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Check API health
+      description: |
+        Simple health check endpoint to verify the API is running.
+        Returns basic service information and status.
+      operationId: health_check
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: "healthy"
+                timestamp: "2024-01-15T10:30:00Z"
+                version: "1.0.0"
+                services:
+                  database: "connected"
+                  websocket: "active"
+                  executor: "ready"
+
+  # SESSION MANAGEMENT ENDPOINTS
+  /sessions:
+    post:
+      tags:
+        - Sessions
+      summary: Create a new interview session
+      description: |
+        Creates a new coding interview session and returns a unique session ID.
+        The response includes a shareable URL that participants can use to join.
+        
+        **Use Case**: An interviewer clicks "Create New Interview" to start a session.
+      operationId: create_session
+      requestBody:
+        description: Optional session configuration
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSessionRequest'
+            example:
+              hostName: "John Interviewer"
+              initialLanguage: "javascript"
+              sessionName: "Frontend Developer Interview"
+              maxParticipants: 5
+      responses:
+        '201':
+          description: Session created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+              example:
+                sessionId: "abc123xyz789"
+                joinUrl: "http://localhost:3000/session/abc123xyz789"
+                createdAt: "2024-01-15T10:30:00Z"
+                hostName: "John Interviewer"
+                status: "active"
+                participantCount: 1
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    get:
+      tags:
+        - Sessions
+      summary: List active sessions
+      description: |
+        Returns a list of all active sessions. Useful for debugging or admin purposes.
+        In production, this might be restricted to authenticated admins only.
+      operationId: list_sessions
+      parameters:
+        - name: status
+          in: query
+          description: Filter sessions by status
+          required: false
+          schema:
+            type: string
+            enum: [active, completed, all]
+            default: active
+        - name: limit
+          in: query
+          description: Maximum number of sessions to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: List of sessions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SessionSummary'
+                  total:
+                    type: integer
+                    description: Total number of sessions
+              example:
+                sessions:
+                  - sessionId: "abc123xyz789"
+                    createdAt: "2024-01-15T10:30:00Z"
+                    hostName: "John Interviewer"
+                    participantCount: 2
+                    status: "active"
+                  - sessionId: "def456uvw012"
+                    createdAt: "2024-01-15T09:00:00Z"
+                    hostName: "Jane HR"
+                    participantCount: 1
+                    status: "completed"
+                total: 2
+
+  /sessions/{sessionId}:
+    get:
+      tags:
+        - Sessions
+      summary: Get session details
+      description: |
+        Retrieves detailed information about a specific session including
+        current code, language, participants, and status.
+        
+        **Use Case**: When a user joins a session, fetch current state to sync their editor.
+      operationId: get_session
+      parameters:
+        - name: sessionId
+          in: path
+          description: Unique session identifier
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-zA-Z0-9-_]+$'
+          example: "abc123xyz789"
+      responses:
+        '200':
+          description: Session details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionDetails'
+              example:
+                sessionId: "abc123xyz789"
+                joinUrl: "http://localhost:3000/session/abc123xyz789"
+                createdAt: "2024-01-15T10:30:00Z"
+                updatedAt: "2024-01-15T10:45:00Z"
+                hostName: "John Interviewer"
+                status: "active"
+                participantCount: 2
+                participants:
+                  - clientId: "client-001"
+                    displayName: "John Interviewer"
+                    role: "host"
+                    joinedAt: "2024-01-15T10:30:00Z"
+                  - clientId: "client-002"
+                    displayName: "Jane Candidate"
+                    role: "participant"
+                    joinedAt: "2024-01-15T10:32:00Z"
+                currentCode: |
+                  function fibonacci(n) {
+                    if (n <= 1) return n;
+                    return fibonacci(n - 1) + fibonacci(n - 2);
+                  }
+                  console.log(fibonacci(10));
+                currentLanguage: "javascript"
+                executionHistory:
+                  - timestamp: "2024-01-15T10:40:00Z"
+                    language: "javascript"
+                    output: "55"
+                    duration: 12
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Sessions
+      summary: End a session
+      description: |
+        Marks a session as completed and disconnects all participants.
+        Only the session host should be able to end the session.
+      operationId: end_session
+      parameters:
+        - name: sessionId
+          in: path
+          description: Unique session identifier
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Session ended successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # LANGUAGE SUPPORT ENDPOINTS
+  /languages:
+    get:
+      tags:
+        - Languages
+      summary: List supported languages
+      description: |
+        Returns a list of all programming languages supported by the platform.
+        Each language includes its ID (used in code execution), display name,
+        and default code template.
+        
+        **Use Case**: Populate the language dropdown in the code editor.
+      operationId: list_languages
+      responses:
+        '200':
+          description: List of supported languages
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  languages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Language'
+              example:
+                languages:
+                  - id: "javascript"
+                    name: "JavaScript"
+                    version: "ES2022"
+                    canRunInBrowser: true
+                    defaultCode: |
+                      // Welcome to the coding interview platform!
+                      // Start writing your JavaScript code here
+                      
+                      function solution() {
+                        console.log("Hello, World!");
+                      }
+                      
+                      solution();
+                    fileExtension: ".js"
+                    monacoLanguage: "javascript"
+                  - id: "python"
+                    name: "Python"
+                    version: "3.11"
+                    canRunInBrowser: false
+                    defaultCode: |
+                      # Welcome to the coding interview platform!
+                      # Start writing your Python code here
+                      
+                      def solution():
+                          print("Hello, World!")
+                      
+                      solution()
+                    fileExtension: ".py"
+                    monacoLanguage: "python"
+
+  /languages/{languageId}/template:
+    get:
+      tags:
+        - Languages
+      summary: Get language template
+      description: |
+        Returns the default code template for a specific language.
+        Useful when switching languages to provide starter code.
+      operationId: get_language_template
+      parameters:
+        - name: languageId
+          in: path
+          description: Language identifier (e.g., "javascript", "python")
+          required: true
+          schema:
+            type: string
+          example: "javascript"
+      responses:
+        '200':
+          description: Language template
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  languageId:
+                    type: string
+                  template:
+                    type: string
+                    description: Default code template
+              example:
+                languageId: "javascript"
+                template: |
+                  function solution() {
+                    // Your code here
+                    console.log("Hello, World!");
+                  }
+                  
+                  solution();
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # CODE EXECUTION ENDPOINTS
+  /sessions/{sessionId}/execute:
+    post:
+      tags:
+        - Execution
+      summary: Execute code
+      description: |
+        Executes code for a specific session and language. The code runs in a
+        sandboxed environment with resource limits and timeout protection.
+        
+        **JavaScript**: Can run in the browser, but backend execution provides consistency
+        **Other languages**: Must run on the backend
+        
+        **Security**: Code runs with limited resources, network access disabled,
+        and a maximum execution time of 5 seconds.
+      operationId: execute_code
+      parameters:
+        - name: sessionId
+          in: path
+          description: Session identifier
+          required: true
+          schema:
+            type: string
+          example: "abc123xyz789"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecuteCodeRequest'
+            example:
+              code: |
+                for i in range(1, 11):
+                    print(f"Number: {i}")
+              language: "python"
+              stdin: ""
+              timeLimit: 5000
+      responses:
+        '200':
+          description: Execution completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutionResponse'
+              examples:
+                success:
+                  summary: Successful execution
+                  value:
+                    sessionId: "abc123xyz789"
+                    language: "python"
+                    stdout: "Number: 1\nNumber: 2\nNumber: 3\nNumber: 4\nNumber: 5\nNumber: 6\nNumber: 7\nNumber: 8\nNumber: 9\nNumber: 10\n"
+                    stderr: ""
+                    exitCode: 0
+                    duration: 15
+                    success: true
+                    timestamp: "2024-01-15T10:45:00Z"
+                error:
+                  summary: Runtime error
+                  value:
+                    sessionId: "abc123xyz789"
+                    language: "python"
+                    stdout: ""
+                    stderr: "NameError: name 'undefined_variable' is not defined"
+                    exitCode: 1
+                    duration: 8
+                    success: false
+                    error: "Runtime error occurred"
+                    timestamp: "2024-01-15T10:46:00Z"
+                timeout:
+                  summary: Execution timeout
+                  value:
+                    sessionId: "abc123xyz789"
+                    language: "python"
+                    stdout: "Processing..."
+                    stderr: ""
+                    exitCode: -1
+                    duration: 5000
+                    success: false
+                    error: "Execution timed out after 5 seconds"
+                    timestamp: "2024-01-15T10:47:00Z"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+# WEBSOCKET DOCUMENTATION
+# Note: OpenAPI doesn't formally support WebSocket, but we document it here
+x-websocket-endpoints:
+  /ws/sessions/{sessionId}:
+    description: |
+      ## WebSocket Endpoint for Real-time Collaboration
+      
+      Connect to this endpoint to join a session's real-time channel.
+      All participants in the same session receive broadcasts of code changes,
+      language changes, and execution results.
+      
+      ### Connection URL
+      ```
+      ws://localhost:8000/ws/sessions/{sessionId}
+      ```
+      
+      ### Connection Example (JavaScript)
+      ```javascript
+      const socket = new WebSocket(`ws://localhost:8000/ws/sessions/${sessionId}`);
+      
+      socket.onopen = () => {
+        // Send join message
+        socket.send(JSON.stringify({
+          type: 'join_session',
+          data: {
+            sessionId: 'abc123xyz789',
+            clientId: 'client-001',
+            displayName: 'John Developer'
+          }
+        }));
+      };
+      
+      socket.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+        console.log('Received:', message);
+      };
+      ```
+    
+    # INCOMING MESSAGES (Client to Server)
+    incoming_messages:
+      join_session:
+        description: Join a session and announce presence
+        example:
+          type: "join_session"
+          data:
+            sessionId: "abc123xyz789"
+            clientId: "client-001"
+            displayName: "John Developer"
+          timestamp: "2024-01-15T10:30:00Z"
+      
+      leave_session:
+        description: Leave the session gracefully
+        example:
+          type: "leave_session"
+          data:
+            sessionId: "abc123xyz789"
+            clientId: "client-001"
+          timestamp: "2024-01-15T11:00:00Z"
+      
+      code_update:
+        description: Broadcast code changes to all participants
+        example:
+          type: "code_update"
+          data:
+            sessionId: "abc123xyz789"
+            clientId: "client-001"
+            code: |
+              function fibonacci(n) {
+                if (n <= 1) return n;
+                return fibonacci(n - 1) + fibonacci(n - 2);
+              }
+            language: "javascript"
+            cursorPosition:
+              line: 3
+              column: 15
+          timestamp: "2024-01-15T10:35:00Z"
+      
+      language_change:
+        description: Notify all participants of language change
+        example:
+          type: "language_change"
+          data:
+            sessionId: "abc123xyz789"
+            clientId: "client-001"
+            language: "python"
+          timestamp: "2024-01-15T10:36:00Z"
+      
+      execute_code:
+        description: Request code execution and broadcast results
+        example:
+          type: "execute_code"
+          data:
+            sessionId: "abc123xyz789"
+            clientId: "client-001"
+            code: "print('Hello, World!')"
+            language: "python"
+          timestamp: "2024-01-15T10:40:00Z"
+    
+    # OUTGOING MESSAGES (Server to Client)
+    outgoing_messages:
+      user_joined:
+        description: Notification when a user joins the session
+        example:
+          type: "user_joined"
+          data:
+            sessionId: "abc123xyz789"
+            clientId: "client-002"
+            displayName: "Jane Candidate"
+            participantCount: 2
+            participants:
+              - clientId: "client-001"
+                displayName: "John Interviewer"
+                role: "host"
+              - clientId: "client-002"
+                displayName: "Jane Candidate"
+                role: "participant"
+          timestamp: "2024-01-15T10:32:00Z"
+      
+      user_left:
+        description: Notification when a user leaves the session
+        example:
+          type: "user_left"
+          data:
+            sessionId: "abc123xyz789"
+            clientId: "client-002"
+            displayName: "Jane Candidate"
+            participantCount: 1
+          timestamp: "2024-01-15T11:00:00Z"
+      
+      code_update:
+        description: Broadcast code changes from another participant
+        example:
+          type: "code_update"
+          data:
+            sessionId: "abc123xyz789"
+            clientId: "client-001"
+            displayName: "John Interviewer"
+            code: "def hello():\n    print('Hello')"
+            language: "python"
+            cursorPosition:
+              line: 2
+              column: 10
+          timestamp: "2024-01-15T10:35:00Z"
+      
+      language_change:
+        description: Broadcast language change from another participant
+        example:
+          type: "language_change"
+          data:
+            sessionId: "abc123xyz789"
+            clientId: "client-001"
+            displayName: "John Interviewer"
+            language: "javascript"
+          timestamp: "2024-01-15T10:36:00Z"
+      
+      execution_result:
+        description: Broadcast code execution results to all participants
+        example:
+          type: "execution_result"
+          data:
+            sessionId: "abc123xyz789"
+            clientId: "client-001"
+            result:
+              stdout: "Hello, World!"
+              stderr: ""
+              exitCode: 0
+              duration: 12
+              success: true
+          timestamp: "2024-01-15T10:40:00Z"
+      
+      session_state:
+        description: Full session state sync (sent on join)
+        example:
+          type: "session_state"
+          data:
+            sessionId: "abc123xyz789"
+            code: "console.log('Current code');"
+            language: "javascript"
+            participantCount: 2
+            participants:
+              - clientId: "client-001"
+                displayName: "John Interviewer"
+                role: "host"
+              - clientId: "client-002"
+                displayName: "Jane Candidate"
+                role: "participant"
+          timestamp: "2024-01-15T10:32:00Z"
+      
+      error:
+        description: Error notification
+        example:
+          type: "error"
+          data:
+            code: "SESSION_NOT_FOUND"
+            message: "Session abc123xyz789 does not exist"
+          timestamp: "2024-01-15T10:30:00Z"
+
+# REUSABLE COMPONENTS
+components:
+  # SCHEMAS (Data Models)
+  schemas:
+    # Health Check Response
+    HealthResponse:
+      type: object
+      description: API health status
+      required:
+        - status
+        - timestamp
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+          description: Overall health status
+        timestamp:
+          type: string
+          format: date-time
+          description: Current server time
+        version:
+          type: string
+          description: API version
+        services:
+          type: object
+          description: Individual service statuses
+          additionalProperties:
+            type: string
+    
+    # Session Creation Request
+    CreateSessionRequest:
+      type: object
+      description: Optional configuration when creating a session
+      properties:
+        hostName:
+          type: string
+          description: Display name of the session host
+          maxLength: 50
+          example: "John Interviewer"
+        sessionName:
+          type: string
+          description: Optional session title
+          maxLength: 100
+          example: "Frontend Developer Interview"
+        initialLanguage:
+          type: string
+          description: Starting programming language
+          enum: [javascript, python, java, cpp]
+          default: javascript
+        maxParticipants:
+          type: integer
+          description: Maximum number of participants allowed
+          minimum: 2
+          maximum: 10
+          default: 5
+    
+    # Session Response
+    SessionResponse:
+      type: object
+      description: Created session information
+      required:
+        - sessionId
+        - joinUrl
+        - createdAt
+        - status
+      properties:
+        sessionId:
+          type: string
+          description: Unique session identifier
+          example: "abc123xyz789"
+        joinUrl:
+          type: string
+          format: uri
+          description: URL to share with participants
+          example: "http://localhost:3000/session/abc123xyz789"
+        createdAt:
+          type: string
+          format: date-time
+          description: Session creation timestamp
+        hostName:
+          type: string
+          description: Display name of the host
+        status:
+          type: string
+          enum: [active, completed]
+          description: Current session status
+        participantCount:
+          type: integer
+          description: Current number of participants
+    
+    # Session Summary (for list view)
+    SessionSummary:
+      type: object
+      description: Brief session information for list views
+      required:
+        - sessionId
+        - createdAt
+        - status
+      properties:
+        sessionId:
+          type: string
+          description: Unique session identifier
+        createdAt:
+          type: string
+          format: date-time
+        hostName:
+          type: string
+        participantCount:
+          type: integer
+        status:
+          type: string
+          enum: [active, completed]
+    
+    # Detailed Session Information
+    SessionDetails:
+      type: object
+      description: Complete session information including code and participants
+      required:
+        - sessionId
+        - joinUrl
+        - createdAt
+        - status
+        - currentLanguage
+      properties:
+        sessionId:
+          type: string
+        joinUrl:
+          type: string
+          format: uri
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        hostName:
+          type: string
+        status:
+          type: string
+          enum: [active, completed]
+        participantCount:
+          type: integer
+        participants:
+          type: array
+          description: List of current participants
+          items:
+            $ref: '#/components/schemas/Participant'
+        currentCode:
+          type: string
+          description: Current code in the editor
+        currentLanguage:
+          type: string
+          description: Currently selected language
+        executionHistory:
+          type: array
+          description: Recent code execution results
+          items:
+            $ref: '#/components/schemas/ExecutionSummary'
+    
+    # Participant Information
+    Participant:
+      type: object
+      description: Information about a session participant
+      required:
+        - clientId
+        - displayName
+        - role
+        - joinedAt
+      properties:
+        clientId:
+          type: string
+          description: Unique client identifier
+        displayName:
+          type: string
+          description: Display name shown to other participants
+        role:
+          type: string
+          enum: [host, participant]
+          description: User role in the session
+        joinedAt:
+          type: string
+          format: date-time
+          description: When the participant joined
+    
+    # Execution Summary (for history)
+    ExecutionSummary:
+      type: object
+      description: Summary of a code execution
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        language:
+          type: string
+        output:
+          type: string
+          description: Truncated output (first 200 chars)
+        duration:
+          type: integer
+          description: Execution time in milliseconds
+        success:
+          type: boolean
+    
+    # Language Information
+    Language:
+      type: object
+      description: Programming language configuration
+      required:
+        - id
+        - name
+        - canRunInBrowser
+        - fileExtension
+      properties:
+        id:
+          type: string
+          description: Language identifier used in API calls
+          example: "javascript"
+        name:
+          type: string
+          description: Display name
+          example: "JavaScript"
+        version:
+          type: string
+          description: Language version
+          example: "ES2022"
+        canRunInBrowser:
+          type: boolean
+          description: Whether this language can execute in the browser
+        defaultCode:
+          type: string
+          description: Default code template for new sessions
+        fileExtension:
+          type: string
+          description: File extension for this language
+          example: ".js"
+        monacoLanguage:
+          type: string
+          description: Monaco editor language identifier
+    
+    # Code Execution Request
+    ExecuteCodeRequest:
+      type: object
+      description: Request to execute code
+      required:
+        - code
+        - language
+      properties:
+        code:
+          type: string
+          description: Source code to execute
+          maxLength: 50000
+        language:
+          type: string
+          description: Programming language identifier
+          enum: [javascript, python, java, cpp]
+        stdin:
+          type: string
+          description: Standard input for the program
+          default: ""
+        timeLimit:
+          type: integer
+          description: Maximum execution time in milliseconds
+          minimum: 100
+          maximum: 10000
+          default: 5000
+    
+    # Execution Response
+    ExecutionResponse:
+      type: object
+      description: Code execution results
+      required:
+        - sessionId
+        - language
+        - stdout
+        - stderr
+        - exitCode
+        - duration
+        - success
+        - timestamp
+      properties:
+        sessionId:
+          type: string
+        language:
+          type: string
+        stdout:
+          type: string
+          description: Standard output from the program
+        stderr:
+          type: string
+          description: Standard error output
+        exitCode:
+          type: integer
+          description: Process exit code (0 = success, -1 = timeout)
+        duration:
+          type: integer
+          description: Actual execution time in milliseconds
+        success:
+          type: boolean
+          description: Whether execution completed successfully
+        error:
+          type: string
+          description: Error message if execution failed
+        timestamp:
+          type: string
+          format: date-time
+          description: When the execution completed
+    
+    # Error Response
+    ErrorResponse:
+      type: object
+      description: Standard error response format
+      required:
+        - error
+        - message
+        - timestamp
+      properties:
+        error:
+          type: string
+          description: Error code for programmatic handling
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Invalid session ID format"
+        details:
+          type: object
+          description: Additional error details
+          additionalProperties: true
+        timestamp:
+          type: string
+          format: date-time
+    
+    # Validation Error
+    ValidationError:
+      type: object
+      description: Input validation error details
+      required:
+        - field
+        - message
+      properties:
+        field:
+          type: string
+          description: Field that failed validation
+        message:
+          type: string
+          description: Validation error message
+        value:
+          description: The invalid value that was provided
+  
+  # REUSABLE RESPONSES
+  responses:
+    BadRequest:
+      description: Bad request - invalid input
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "VALIDATION_ERROR"
+            message: "Invalid request parameters"
+            details:
+              errors:
+                - field: "language"
+                  message: "Unsupported language: cobol"
+            timestamp: "2024-01-15T10:30:00Z"
+    
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "NOT_FOUND"
+            message: "Session not found"
+            details:
+              sessionId: "invalid123"
+            timestamp: "2024-01-15T10:30:00Z"
+    
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "INTERNAL_ERROR"
+            message: "An unexpected error occurred"
+            timestamp: "2024-01-15T10:30:00Z"
+
+  # SECURITY SCHEMES (for future use)
+  securitySchemes:
+    sessionToken:
+      type: apiKey
+      in: header
+      name: X-Session-Token
+      description: |
+        Session token for authentication (future implementation).
+        For now, sessions are identified by their ID in the URL.
+    
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT authentication for admin endpoints (future implementation).
+        Not required for MVP.
+
+# ============================================================================
+# HOW THE REACT FRONTEND AND FASTAPI BACKEND USE THIS API
+# ============================================================================
+# 
+# ## React Frontend Integration
+# 
+# The React frontend (already built) will consume this API as follows:
+# 
+# 1. **Landing Page**:
+#    - Calls `POST /api/v1/sessions` when creating a new interview
+#    - Redirects to the session page with the returned `sessionId`
+# 
+# 2. **Session Page**:
+#    - Calls `GET /api/v1/sessions/{sessionId}` to load initial state
+#    - Calls `GET /api/v1/languages` to populate language dropdown
+#    - Connects to `ws://localhost:8000/ws/sessions/{sessionId}` for real-time updates
+#    - Sends WebSocket messages for code changes and receives updates from other users
+#    - Calls `POST /api/v1/sessions/{sessionId}/execute` for non-JavaScript languages
+# 
+# 3. **WebSocket Flow**:
+#    - On connect: Send `join_session` message
+#    - On code change: Send `code_update` message
+#    - On language change: Send `language_change` message
+#    - Listen for: `user_joined`, `user_left`, `code_update`, `language_change`, `execution_result`
+# 
+# ## FastAPI Backend Implementation
+# 
+# To implement this API with FastAPI:
+# 
+# 1. **Project Structure**:
+#    ```
+#    backend/
+#    ├── main.py              # FastAPI app and routes
+#    ├── models.py            # Pydantic models matching schemas
+#    ├── websocket.py         # WebSocket handler
+#    ├── execution.py         # Code execution service
+#    ├── sessions.py          # Session management
+#    └── requirements.txt     # Dependencies
+#    ```
+# 
+# 2. **Key FastAPI Features to Use**:
+#    - Pydantic models for request/response validation
+#    - WebSocket support for real-time features
+#    - Background tasks for code execution
+#    - CORS middleware for frontend communication
+# 
+# 3. **Example FastAPI Implementation**:
+#    ```python
+#    from fastapi import FastAPI, WebSocket
+#    from fastapi.middleware.cors import CORSMiddleware
+#    
+#    app = FastAPI(title="Coding Interview Platform API")
+#    
+#    # Enable CORS for React frontend
+#    app.add_middleware(
+#        CORSMiddleware,
+#        allow_origins=["http://localhost:3000"],
+#        allow_methods=["*"],
+#        allow_headers=["*"],
+#    )
+#    
+#    @app.post("/api/v1/sessions", status_code=201)
+#    async def create_session(request: CreateSessionRequest):
+#        # Implementation here
+#        pass
+#    
+#    @app.websocket("/ws/sessions/{session_id}")
+#    async def websocket_endpoint(websocket: WebSocket, session_id: str):
+#        # WebSocket handling here
+#        pass
+#    ```
+# 
+# 4. **Security Considerations**:
+#    - Use UUID for session IDs to prevent guessing
+#    - Implement rate limiting for code execution
+#    - Sandbox code execution with Docker or similar
+#    - Validate and sanitize all inputs
+#    - Set resource limits (CPU, memory, time) for execution
+# 
+# 5. **Deployment**:
+#    - Use environment variables for configuration
+#    - Deploy with Docker for consistent environments
+#    - Use Redis for session storage in production
+#    - Consider using a message queue for code execution
+# 
+# This API design provides a complete, production-ready specification that
+# balances simplicity for beginners with extensibility for future features.
