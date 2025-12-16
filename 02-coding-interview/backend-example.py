@@ -106,7 +106,14 @@ LANGUAGES = [
         "name": "JavaScript",
         "version": "ES2022",
         "canRunInBrowser": True,
-        "defaultCode": "// Welcome to the coding interview platform!\\n// Start writing your JavaScript code here\\n\\nfunction solution() {\\n  console.log(\\"Hello, World!\\");\\n}\\n\\nsolution();",
+        "defaultCode": """// Welcome to the coding interview platform!
+// Start writing your JavaScript code here
+
+function solution() {
+  console.log("Hello, World!");
+}
+
+solution();""",
         "fileExtension": ".js",
         "monacoLanguage": "javascript"
     },
@@ -115,7 +122,13 @@ LANGUAGES = [
         "name": "Python",
         "version": "3.11",
         "canRunInBrowser": False,
-        "defaultCode": "# Welcome to the coding interview platform!\\n# Start writing your Python code here\\n\\ndef solution():\\n    print(\\"Hello, World!\\")\\n\\nsolution()",
+        "defaultCode": """# Welcome to the coding interview platform!
+# Start writing your Python code here
+
+def solution():
+    print("Hello, World!")
+
+solution()""",
         "fileExtension": ".py",
         "monacoLanguage": "python"
     },
@@ -124,7 +137,14 @@ LANGUAGES = [
         "name": "Java",
         "version": "17",
         "canRunInBrowser": False,
-        "defaultCode": "// Welcome to the coding interview platform!\\n// Start writing your Java code here\\n\\npublic class Main {\\n    public static void main(String[] args) {\\n        System.out.println(\\"Hello, World!\\");\\n    }\\n}",
+        "defaultCode": """// Welcome to the coding interview platform!
+// Start writing your Java code here
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("Hello, World!");
+    }
+}""",
         "fileExtension": ".java",
         "monacoLanguage": "java"
     },
@@ -133,7 +153,16 @@ LANGUAGES = [
         "name": "C++",
         "version": "17",
         "canRunInBrowser": False,
-        "defaultCode": "// Welcome to the coding interview platform!\\n// Start writing your C++ code here\\n\\n#include <iostream>\\nusing namespace std;\\n\\nint main() {\\n    cout << \\"Hello, World!\\" << endl;\\n    return 0;\\n}",
+        "defaultCode": """// Welcome to the coding interview platform!
+// Start writing your C++ code here
+
+#include <iostream>
+using namespace std;
+
+int main() {
+    cout << "Hello, World!" << endl;
+    return 0;
+}""",
         "fileExtension": ".cpp",
         "monacoLanguage": "cpp"
     }
@@ -534,7 +563,7 @@ if __name__ == "__main__":
     
     # Run the FastAPI application
     uvicorn.run(
-        app,
+        "backend-example:app",  # Use module string for reload to work
         host="0.0.0.0",
         port=8000,
         reload=True,  # Auto-reload on code changes during development
