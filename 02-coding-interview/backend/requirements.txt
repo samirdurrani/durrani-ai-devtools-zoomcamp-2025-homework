@@ -1,0 +1,28 @@
+# FastAPI Backend Requirements
+# Install with: pip install -r requirements.txt
+
+# Core Framework
+fastapi==0.104.1              # Web framework
+uvicorn[standard]==0.24.0     # ASGI server with WebSocket support
+python-multipart==0.0.6       # Form data support
+
+# Data Validation
+pydantic==2.5.0               # Data validation using Python type hints
+pydantic-settings==2.1.0      # Settings management
+
+# WebSocket Support
+websockets==12.0              # WebSocket client/server library
+
+# Development & Testing
+pytest==7.4.3                 # Testing framework
+pytest-asyncio==0.21.1        # Async test support
+httpx==0.25.2                 # HTTP client for testing
+pytest-cov==4.1.0             # Code coverage
+
+# Utilities
+python-dotenv==1.0.0          # Environment variable management
+python-json-logger==2.0.7     # JSON logging
+
+# Optional: Code Execution (for safe sandboxing)
+# subprocess is built-in, but these help with safety:
+psutil==5.9.6                 # Process and system utilities (for resource limiting)
