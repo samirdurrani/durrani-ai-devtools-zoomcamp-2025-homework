@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { LANGUAGES, WS_EVENTS } from '../utils/constants';
-import { executeJavaScript, formatExecutionResult } from '../services/codeExecution';
+import browserExecutionService from '../services/browserExecution';
 import { apiService } from '../services/api';
 import '../styles/SessionPage.css';
 
@@ -21,6 +21,7 @@ export default function SessionPage() {
   const [isExecuting, setIsExecuting] = useState(false);
   const [sessionUrl, setSessionUrl] = useState('');
   const [isCopied, setIsCopied] = useState(false);
+  const [pythonLoading, setPythonLoading] = useState(false);
   
   // WebSocket connection
   const {
@@ -141,33 +142,55 @@ export default function SessionPage() {
   // Handle code execution
   const handleExecuteCode = async () => {
     setIsExecuting(true);
-    setOutput('Running code...');
+    
+    // Special message for Python (first-time loading)
+    if (language === 'python' && !browserExecutionService.pyodideReady) {
+      setPythonLoading(true);
+      setOutput('🐍 Loading Python environment (Pyodide)...\nThis may take 10-15 seconds on first run.\nSubsequent runs will be instant.');
+    } else {
+      setOutput('🚀 Preparing execution environment...');
+    }
     
     try {
-      const currentLang = LANGUAGES.find(l => l.id === language);
+      // Execute code in browser using WebAssembly or sandboxed environment
+      const result = await browserExecutionService.execute(code, language, {
+        timeLimit: language === 'python' ? 30000 : 5000,  // Longer timeout for Python
+        stdin: ''         // Could be extended to support stdin
+      });
       
-      if (currentLang?.canRunInBrowser && language === 'javascript') {
-        // Execute JavaScript locally in the browser
-        const result = await executeJavaScript(code);
-        const formatted = formatExecutionResult(result);
-        setOutput(formatted);
-        
-        // Share result with other users
-        if (isConnected) {
-          sendExecuteCode(code, language);
+      setPythonLoading(false);
+      
+      // Format the output
+      let formatted = '';
+      
+      if (result.success) {
+        formatted = `✅ Execution successful (${result.duration}ms)\n`;
+        formatted += '─'.repeat(40) + '\n';
+        if (result.stdout) {
+          formatted += result.stdout;
+        }
+        if (result.stderr) {
+          if (result.stdout) formatted += '\n';
+          formatted += `⚠️ Errors/Warnings:\n${result.stderr}`;
         }
       } else {
-        // Execute on backend for other languages
-        try {
-          const result = await apiService.executeCode(sessionId, code, language);
-          const formatted = formatExecutionResult(result);
-          setOutput(formatted);
-        } catch (error) {
-          setOutput(`❌ Error: Cannot execute ${language} code. Backend service required.\n\nPlease ensure the backend server is running.`);
+        formatted = `❌ Execution failed (${result.duration}ms)\n`;
+        formatted += '─'.repeat(40) + '\n';
+        if (result.stderr) {
+          formatted += result.stderr;
+        } else if (result.error) {
+          formatted += result.error;
         }
       }
+      
+      setOutput(formatted);
+      
+      // Share result with other users via WebSocket
+      if (isConnected) {
+        sendExecuteCode(code, language);
+      }
     } catch (error) {
-      setOutput(`❌ Error: ${error.message}`);
+      setOutput(`❌ Execution Error: ${error.message}`);
     } finally {
       setIsExecuting(false);
     }
@@ -243,8 +266,9 @@ export default function SessionPage() {
               onClick={handleExecuteCode}
               disabled={isExecuting || !code.trim()}
               className="btn-run"
+              title={isExecuting ? 'Executing...' : `Run ${LANGUAGES.find(l => l.id === language)?.name} code`}
             >
-              {isExecuting ? '⏳ Running...' : '▶️ Run Code'}
+              {pythonLoading ? '🐍 Loading Python...' : isExecuting ? '⏳ Running...' : '▶️ Run Code'}
             </button>
           </div>
           

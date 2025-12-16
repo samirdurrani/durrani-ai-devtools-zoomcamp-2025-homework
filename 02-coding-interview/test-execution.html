@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser Execution Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #007acc;
+            padding-bottom: 10px;
+        }
+        .test-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .language-header {
+            background: #007acc;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        .code-block {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            white-space: pre-wrap;
+            margin: 10px 0;
+        }
+        .output {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #4caf50;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .error {
+            border-left-color: #f44336;
+            background: #ffebee;
+        }
+        button {
+            background: #4caf50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status.loading {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚀 Browser-Based Code Execution Test</h1>
+    <p>Testing WebAssembly-based code execution for the Online Coding Interview Platform</p>
+
+    <div class="test-container">
+        <div class="language-header">📘 JavaScript (Native)</div>
+        <div class="code-block" id="js-code">// JavaScript Test
+console.log("Hello from JavaScript!");
+const numbers = [1, 2, 3, 4, 5];
+const sum = numbers.reduce((a, b) => a + b, 0);
+console.log("Sum:", sum);
+console.log("Squared:", numbers.map(x => x * x));</div>
+        <button onclick="runJavaScript()">Run JavaScript</button>
+        <div id="js-output" class="output" style="display:none;"></div>
+    </div>
+
+    <div class="test-container">
+        <div class="language-header">🔷 TypeScript (Transpiled)</div>
+        <div class="code-block" id="ts-code">// TypeScript Test
+interface Person {
+    name: string;
+    age: number;
+}
+
+const greet = (person: Person): void => {
+    console.log(`Hello, ${person.name}!`);
+    console.log(`Age: ${person.age}`);
+}
+
+greet({ name: "Alice", age: 30 });</div>
+        <button onclick="runTypeScript()">Run TypeScript</button>
+        <div id="ts-output" class="output" style="display:none;"></div>
+    </div>
+
+    <div class="test-container">
+        <div class="language-header">🐍 Python (Pyodide WebAssembly)</div>
+        <div class="code-block" id="py-code"># Python Test
+print("Hello from Python!")
+numbers = [1, 2, 3, 4, 5]
+print(f"Sum: {sum(numbers)}")
+print(f"Squared: {[x**2 for x in numbers]}")
+
+# Test imports
+import math
+print(f"Pi: {math.pi:.4f}")
+print(f"Square root of 2: {math.sqrt(2):.4f}")</div>
+        <button id="py-button" onclick="runPython()">Run Python</button>
+        <div id="py-status" class="status loading" style="display:none;"></div>
+        <div id="py-output" class="output" style="display:none;"></div>
+    </div>
+
+    <script type="module">
+        // Import the browser execution service
+        import browserExecutionService from './interview-platform/src/services/browserExecution.js';
+        
+        // Make it available globally for button clicks
+        window.executionService = browserExecutionService;
+        
+        // JavaScript execution
+        window.runJavaScript = async function() {
+            const code = document.getElementById('js-code').textContent;
+            const outputEl = document.getElementById('js-output');
+            outputEl.style.display = 'block';
+            outputEl.textContent = 'Running JavaScript...';
+            outputEl.className = 'output';
+            
+            try {
+                const result = await executionService.execute(code, 'javascript');
+                if (result.success) {
+                    outputEl.textContent = `✅ Success (${result.duration}ms)\n\n${result.stdout}`;
+                } else {
+                    outputEl.textContent = `❌ Error:\n${result.stderr}`;
+                    outputEl.className = 'output error';
+                }
+            } catch (error) {
+                outputEl.textContent = `❌ Execution failed: ${error.message}`;
+                outputEl.className = 'output error';
+            }
+        };
+        
+        // TypeScript execution
+        window.runTypeScript = async function() {
+            const code = document.getElementById('ts-code').textContent;
+            const outputEl = document.getElementById('ts-output');
+            outputEl.style.display = 'block';
+            outputEl.textContent = 'Compiling and running TypeScript...';
+            outputEl.className = 'output';
+            
+            try {
+                const result = await executionService.execute(code, 'typescript');
+                if (result.success) {
+                    outputEl.textContent = `✅ Success (${result.duration}ms)\n\n${result.stdout}`;
+                } else {
+                    outputEl.textContent = `❌ Error:\n${result.stderr}`;
+                    outputEl.className = 'output error';
+                }
+            } catch (error) {
+                outputEl.textContent = `❌ Execution failed: ${error.message}`;
+                outputEl.className = 'output error';
+            }
+        };
+        
+        // Python execution
+        window.runPython = async function() {
+            const code = document.getElementById('py-code').textContent;
+            const outputEl = document.getElementById('py-output');
+            const statusEl = document.getElementById('py-status');
+            const buttonEl = document.getElementById('py-button');
+            
+            statusEl.style.display = 'block';
+            outputEl.style.display = 'none';
+            statusEl.textContent = '🐍 Loading Python environment (Pyodide)... This may take 10-15 seconds on first run.';
+            statusEl.className = 'status loading';
+            buttonEl.disabled = true;
+            
+            try {
+                const result = await executionService.execute(code, 'python', { timeLimit: 30000 });
+                
+                statusEl.style.display = 'none';
+                outputEl.style.display = 'block';
+                outputEl.className = 'output';
+                
+                if (result.success) {
+                    outputEl.textContent = `✅ Success (${result.duration}ms)\n\n${result.stdout}`;
+                } else {
+                    outputEl.textContent = `❌ Error:\n${result.stderr}`;
+                    outputEl.className = 'output error';
+                }
+            } catch (error) {
+                statusEl.className = 'status error';
+                statusEl.textContent = `❌ Failed to load Python: ${error.message}`;
+                outputEl.style.display = 'none';
+            } finally {
+                buttonEl.disabled = false;
+            }
+        };
+        
+        // Pre-initialize Python on page load (optional)
+        window.addEventListener('load', () => {
+            console.log('Page loaded. You can now test code execution!');
+            // Optionally pre-load Python
+            // executionService.initializePyodide().catch(console.error);
+        });
+    </script>
+</body>
+</html>

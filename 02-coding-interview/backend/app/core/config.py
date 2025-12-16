@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     # Code Execution Configuration
     code_execution_timeout: int = 5  # Seconds before killing execution
     code_max_output_size: int = 10000  # Maximum characters in output
-    enable_server_execution: bool = True  # Allow server-side code execution
+    enable_server_execution: bool = False  # Disabled by default for security - browser execution only
     
     # Security
     max_code_size: int = 50000  # Maximum code size in characters
