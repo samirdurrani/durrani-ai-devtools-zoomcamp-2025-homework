@@ -1,0 +1,48 @@
+{
+  "name": "coding-interview-platform",
+  "version": "1.0.0",
+  "description": "Online Coding Interview Platform - Full Stack Application",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n \"Backend,Frontend\" -c \"yellow,cyan\" \"npm run backend:dev\" \"npm run frontend:dev\"",
+    "start": "concurrently -n \"Backend,Frontend\" -c \"yellow,cyan\" \"npm run backend:start\" \"npm run frontend:start\"",
+    "backend:dev": "cd backend && python run.py",
+    "backend:start": "cd backend && python -m app.main",
+    "frontend:dev": "cd interview-platform && npm run dev",
+    "frontend:start": "cd interview-platform && npm run preview",
+    "frontend:build": "cd interview-platform && npm run build",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd backend && pytest -m 'not integration and not e2e'",
+    "test:backend:all": "concurrently -n \"Server,Tests\" -c \"yellow,green\" \"npm run backend:dev\" \"sleep 3 && cd backend && pytest\"",
+    "test:frontend": "cd interview-platform && npm test",
+    "test:integration": "cd backend && python run_tests.py integration",
+    "test:e2e": "cd backend && python run_tests.py e2e",
+    "install": "npm run install:backend && npm run install:frontend",
+    "install:backend": "cd backend && pip install -r requirements.txt && pip install -r tests/requirements-test.txt",
+    "install:frontend": "cd interview-platform && npm install",
+    "clean": "npm run clean:backend && npm run clean:frontend",
+    "clean:backend": "cd backend && find . -type d -name __pycache__ -exec rm -rf {} + || true && find . -type f -name '*.pyc' -delete || true",
+    "clean:frontend": "cd interview-platform && rm -rf node_modules dist",
+    "format": "npm run format:backend && npm run format:frontend",
+    "format:backend": "cd backend && black app tests || echo 'Install black: pip install black'",
+    "format:frontend": "cd interview-platform && npm run format || echo 'No format script'"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "author": "",
+  "license": "MIT",
+  "keywords": [
+    "coding-interview",
+    "collaborative-editor",
+    "real-time",
+    "websocket",
+    "fastapi",
+    "react",
+    "monaco-editor"
+  ]
+}
